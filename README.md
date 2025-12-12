@@ -1,4 +1,4 @@
-# Post-issuance binary generation template
+# Post-issuance software
 
 ## Context
 
@@ -45,10 +45,18 @@ may also be useful to include debugging information, such as DWARF, with
 the argument `-ggdb` to facilitate software debugging.
 
 This repository simplifies the generation of post-issuance software.
-This template produces three files: the ELF file of the software, an *ad
-hoc* binary file generated from the previous ELF, and a `gdbinit` file.
-Note that the custom binary file is the one that will be deployed on the
-microcontroller, not the ELF file.
+It consists of :
++ a default CRT0 implementation, to be embedded with the post-issuance software.
++ utils :
+    - to build FAE files from ELF Files,
+    - to read FAE files offboard and display information.
++ sources providing the entrypoint after CRT0 and providing a minimal API.
+
+Calling `make` at the repository root will build :
++ `crt0.elf` and `crt0.fae`.
+    - the first one being used for debugging and referenced in the gdbinit file
+    - the second one will be embedded with post-issuance software.
++ `libfae.a` containing the entrypoint after CRT0 and the minimal API implementation viewed from caller side.
 
 ## *Ad hoc* binary format for post-issuance deployment
 
@@ -104,16 +112,16 @@ Not to scale.
 +-------+----------------+---------+----------------------+-------------------------------------+
 ```
 
-NB: optional padding, referred as "align_text" in code, is used to respect the post issuance's text segment alignment
+NB: optional padding, referred as "--align-text" in code, is used to respect the post issuance's text segment alignment
 requirements.
-align-text is an option of `fae_utils/build_fae.py`.
+`--align-text` is an option of `fae_utils/build_fae.py`.
 
 ## Debugging post-issuance software
 
 Please, read also [GettingStarted document](GETTING_STARTED.md)
 
 ### Off-board.
-XiPFS' format comes with fae_utils, which include `read_fae.py`.
+FAE format comes with fae_utils, which include `read_fae.py`.
 This script allows to read a fae file offboard and to perform integrity checks.
 It can also be used to show different sections hexadecimal dump, or disassembled code
 according to sections.
@@ -125,10 +133,11 @@ information like DWARF. However, we generate a `gdbinit` file that
 contains `symbol-file` and `add-symbol-file` instructions, which allow
 GDB to read additional symbol table information from the ELF file. The
 generated `gdbinit` file includes the actual memory addresses where the
-software sections were copied by the CRT0. Simply replace `# Set binary
-address in NVM here #` with the actual address where the binary is
-loaded. The file can be loaded with the `source gdbinit` command during
-a debugging session.
+software sections were copied by the CRT0.
+Simply replace :
+- `# Define the flash base address here` with the actual address where the binary is loaded.
+- `# Define the RAM base address here` with the actual address of the RAM devoted to the binary.
+The file can be loaded with the `source gdbinit` command during a debugging session.
 
 ## Funding
 
