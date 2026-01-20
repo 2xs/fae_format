@@ -4,6 +4,7 @@
 /**
  * @brief Data structure that describes the memory layout
  * required by the CRT0 to execute the relocatable binary
+ * @warning MUST REMAIN SYNCHRONIZED with xipfs's file definition.
  */
 typedef struct crt0_ctx_s {
     /*
