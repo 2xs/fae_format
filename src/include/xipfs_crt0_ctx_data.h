@@ -7,6 +7,9 @@
  */
 #define XIPFS_EXEC_ARGC_MAX (64)
 
+/**
+ * @warning MUST REMAIN SYNCHRONIZED with libpip-riot and xipfs's file definitions.
+ */
 typedef struct xipfs_crt0_ctx_data_s {
     /*
      * Start address of the file in NVM,
