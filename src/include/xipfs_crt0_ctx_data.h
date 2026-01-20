@@ -3,7 +3,7 @@
 
 /**
  * @brief XIPFS Max Command Line arguments count.
- * @warning MUST REMAIN SYNCHRONIZED with xipfs's file definition.
+ * @warning MUST REMAIN SYNCHRONIZED with libpip-riot and xipfs's file definitions.
  */
 #define XIPFS_EXEC_ARGC_MAX (64)
 
