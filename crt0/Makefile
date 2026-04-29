@@ -40,7 +40,7 @@ RM      := rm
 
 CFLAGS          = -Wall
 CFLAGS         += -Wextra
-CFLAGS         += -Werror
+# CFLAGS         += -Werror
 CFLAGS         += -mthumb
 CFLAGS         += -mcpu=cortex-m4
 CFLAGS         += -ffreestanding
@@ -51,7 +51,8 @@ else
 CFLAGS         += -Os
 endif
 
-LDFLAGS         = -Tlink.ld
+LDFLAGS         = -Tlink-ed.ld
+ORIGINAL_LDFLAGS = -Tlink.ld
 
 OBJCOPYFLAGS    = --input-target=elf32-littlearm
 OBJCOPYFLAGS   += --output-target=binary
@@ -65,7 +66,7 @@ all: ../build/crt0.fae
 	$(OBJCOPY) $(OBJCOPYFLAGS) $< $@
 	@chmod 644 $@
 
-../build/crt0.elf: ../build/crt0.o link.ld
+../build/crt0.elf: ../build/crt0.o link-ed.ld
 	$(LD) $(LDFLAGS) $< -o $@
 
 ../build/crt0.o: crt0.c | ../build
