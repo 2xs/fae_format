@@ -333,7 +333,6 @@ typedef enum xipfs_syscall_e {
 } xipfs_syscall_t;
 
 typedef int (*xipfs_syscall_exit_t)(int status);
-typedef int (*xipfs_syscall_vprintf_t)(const char *format, va_list ap);
 
 static inline void set_r10(const void *ptr) {
     __asm__ volatile("mov sl, %0" ::"r"(ptr));
