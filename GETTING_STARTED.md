@@ -8,7 +8,7 @@ FAE format is a custom made file format that only needs a few information to ens
 runtime execution.
 
 FAE format toolchain parses off-board the ELF format to collect these data to
-satisfy the XIPFS loaders (located in `xipfs_file_exec`).
+satisfy the XIPFS loaders (located in `xipfs_file_exec` and `xipfs_file_safe_exec`).
 
 Once the ELF file converted to a FAE file, developers only have to upload the latter onto
 the board, where XIPFS has been deployed before.
@@ -31,18 +31,33 @@ Developers will need :
   *On Linux, according to distibutions, one may apt install them (`python3-pyelftools`)*.
 
 ## How to build your own code to FAE format ?
-First, developers need to produce a valid ELF file thanks to the C toolchain.
 
-Then, they must call **fae_utils/build_fae.py** with at least elf filename.
+In FAE format directory, start by making required `CRT0` and `libfae.a` components :
+```
+$ make
+...
+$ ls build/
+crt0.elf  crt0.fae  crt0.o  libfae.a  stdriot.o
+```
 
-The simplest call should be :
+Then developers need to produce a valid ELF file thanks to the C toolchain.
+ARM GCC compilation flags must contain the following arguments :
++ `-fPIC`
++ `-msingle-pic-base`
++ `-mpic-register=r10`
++ `-mno-pic-data-is-text-relative`
++ `-Wl,--emit-relocs`
+
+At last, developers must call **fae_utils/build_fae.py** with at least elf filename.
+
+The simplest call from `fae_format` directory should be :
 ```
 $fae_utils/build_fae.py ../another-directory/build/executable.elf
 ```
 
-Two files will be produced into `../another_directory/build`:
-+ executable.fae
-+ a gdbinit script file that will help on debugging FAE files.
+Two files will be produced into `../another-directory/build`:
++ `executable.fae`
++ a `gdbinit` script file that will help on debugging FAE files.
 
 ## Going further with build_fae.py
 

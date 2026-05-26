@@ -66,7 +66,7 @@ def export_crt0_to_bytearray(path_to_crt0, to_bytearray):
         path_to_crt0 += '/'
 
     crt0_filepath = os.path.abspath( path_to_crt0 + FAEConstants.CRT0_FAE_FILENAME )
-
+    print(f'CRT0 filename :{crt0_filepath}')
     with open(crt0_filepath, "rb") as crt0_file:
         to_bytearray += bytearray(crt0_file.read())
     print(f'Export CRT0 : {len(to_bytearray)} bytes')
@@ -240,17 +240,17 @@ def generate_gdbinit(elf_file, crt0_path, metadata_size, exported_symbols_dictio
     bss_size  = \
         exported_symbols_dictionary[FAEConstants.EXPORTED_SYMBOL_RAM_SIZE]
 
-    basepath           = elf_file.stream.name.split('/')[0]
+    dirname            = os.path.dirname(elf_file.stream.name)
     absolute_elf_path  = os.path.abspath(elf_file.stream.name)
 
     if (crt0_path is None):
-        absolute_crt0_path = os.path.abspath(basepath + '/crt0.elf')
+        absolute_crt0_path = os.path.abspath(dirname + '/crt0.elf')
     else:
         if (crt0_path.endswith("/") == False):
             crt0_path += "/"
         absolute_crt0_path = os.path.abspath( crt0_path + FAEConstants.CRT0_ELF_FILENAME )
 
-    gdbinit_filename = f"{basepath}/{FAEConstants.GDBINIT_FILENAME}"
+    gdbinit_filename = f"{dirname}/{FAEConstants.GDBINIT_FILENAME}"
 
     with open(gdbinit_filename, "w+") as gdbinit_file:
         gdbinit_file.write('set $flash_base = # Define the flash base address here\n')
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     if (align_text < 0):
         usage()
 
-
+    elf_filename = os.path.abspath(elf_filename)
     elf_filename_parts = elf_filename.split('.')
     if len(elf_filename_parts) != 2 or elf_filename_parts[1] != 'elf':
         print('Bad ELFFilename : should be something along the line of name.elf')
