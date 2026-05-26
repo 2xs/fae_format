@@ -50,7 +50,7 @@ ARM GCC compilation flags must contain the following arguments :
 
 At last, developers must call **fae_utils/build_fae.py** with at least elf filename.
 
-The simplest call from `fae_format` directory should be :
+The simplest call from FAE format directory should be :
 ```
 $fae_utils/build_fae.py ../another-directory/build/executable.elf
 ```
