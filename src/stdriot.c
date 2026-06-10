@@ -42,6 +42,7 @@
  */
 
 #include <stdarg.h>
+#include <errno.h>
 
 #include "crt0_ctx.h"
 #include "xipfs_crt0_ctx_data.h"
@@ -67,6 +68,28 @@ typedef enum xipfs_syscall_e {
     XIPFS_SYSCALL_COPY_FILE,
     XIPFS_SYSCALL_GET_FILE_SIZE,
     XIPFS_SYSCALL_MEMSET,
+    XIPFS_SYSCALL_MEMCMP,
+    XIPFS_SYSCALL_STRCMP,
+    XIPFS_SYSCALL_STRNCMP,
+
+    /* VFS */
+    XIPFS_SYSCALL_VFS_OPEN,
+    XIPFS_SYSCALL_VFS_CLOSE,
+    XIPFS_SYSCALL_VFS_LSEEK,
+    XIPFS_SYSCALL_VFS_WRITE,
+    XIPFS_SYSCALL_VFS_READ,
+    XIPFS_SYSCALL_VFS_READLINE,
+    XIPFS_SYSCALL_VFS_STAT,
+    XIPFS_SYSCALL_VFS_FSTAT,
+    XIPFS_SYSCALL_VFS_STATVFS,
+    XIPFS_SYSCALL_VFS_FSTATVFS,
+    XIPFS_SYSCALL_VFS_RENAME,
+    XIPFS_SYSCALL_VFS_NORMALIZE_PATH,
+    XIPFS_SYSCALL_VFS_FSYNC,
+    XIPFS_SYSCALL_VFS_FCNTL,
+    XIPFS_SYSCALL_VFS_MKDIR,
+
+    /* This value must remain the last in the enum declaration */
     XIPFS_SYSCALL_MAX
 } xipfs_syscall_t;
 
@@ -83,19 +106,26 @@ typedef ssize_t (*xipfs_syscall_copy_file_t)(
 typedef int (*xipfs_syscall_get_file_size_t)(
     const char *name, size_t *size);
 typedef void *(*xipfs_syscall_memset_t)(void *m, int c, size_t n);
+typedef int (*xipfs_syscall_memcmp_t)(const void *s1, const void *s2, size_t n);
+typedef int (*xipfs_syscall_strcmp_t)(const char *s1, const char *s2);
+typedef int (*xipfs_syscall_strncmp_t)(const char *s1, const char *s2, size_t n);
 
-/**
- * @internal
- *
- * @def XIPFS_SVC_NUMBER
- *
- * The Supervisor Virtual Call number through which SVCs are performed.
- *
- * @warning Must be synchronized with xipfs' one
- *
- * @see xipfs/src/file.c
- */
-// #define XIPFS_SVC_NUMBER 3
+/* VFS */
+typedef int (*xipfs_syscall_vfs_open_t)(const char *name, int flags, mode_t mode);
+typedef int (*xipfs_syscall_vfs_close_t)(int fd);
+typedef off_t (*xipfs_syscall_vfs_lseek_t)(int fd, off_t off, int whence);
+typedef ssize_t (*xipfs_syscall_vfs_write_t)(int fd, const void *src, size_t count);
+typedef ssize_t (*xipfs_syscall_vfs_read_t)(int fd, void *dest, size_t count);
+typedef ssize_t (*xipfs_syscall_vfs_readline_t)(int fd, char *dest, size_t count);
+typedef int (*xipfs_syscall_vfs_stat_t)(const char *restrict path, struct stat *restrict buf);
+typedef int (*xipfs_syscall_vfs_fstat_t)(int fd, struct stat *buf);
+typedef int (*xipfs_syscall_vfs_statvfs_t)(const char *restrict path, struct statvfs *restrict buf);
+typedef int (*xipfs_syscall_vfs_fstatvfs_t)(int fd, struct statvfs *buf);
+typedef int (*xipfs_syscall_vfs_rename_t)(const char *from_path, const char *to_path);
+typedef int (*xipfs_syscall_vfs_normalize_path_t)(char *buf, const char *path, size_t buflen);
+typedef int (*xipfs_syscall_vfs_fsync_t)(int fd);
+typedef int (*xipfs_syscall_vfs_fcntl_t)(int fd, int cmd, int arg);
+typedef int (*xipfs_syscall_vfs_mkdir_t)(const char *name, mode_t mode);
 
 /*
  * Global variable
@@ -261,6 +291,239 @@ void *memset(void *m, int c, size_t n) {
     func = xipfs_syscall_table[XIPFS_SYSCALL_MEMSET];
     set_r10(previous_got);
     res  = func(m, c, n);
+    set_r10(current_got);
+
+    return res;
+}
+
+int memcmp(const void *s1, const void *s2, size_t n) {
+    int res;
+    xipfs_syscall_memcmp_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_MEMCMP];
+    set_r10(previous_got);
+    res  = func(s1, s2, n);
+    set_r10(current_got);
+
+    return res;
+}
+
+int strcmp(const char *s1, const char *s2) {
+    int res;
+    xipfs_syscall_strcmp_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_STRCMP];
+    set_r10(previous_got);
+    res  = func(s1, s2);
+    set_r10(current_got);
+
+    return res;
+}
+
+int strncmp(const char *s1, const char *s2, size_t n) {
+    int res;
+    xipfs_syscall_strncmp_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_STRNCMP];
+    set_r10(previous_got);
+    res  = func(s1, s2, n);
+    set_r10(current_got);
+
+    return res;
+}
+
+/* VFS */
+int open(const char *name, int flags, ...) {
+    int res;
+    xipfs_syscall_vfs_open_t func;
+    mode_t mode = 0;
+
+    if ( ((flags & O_CREAT) != 0)
+#ifdef O_TMPFILE
+        || ((flags & O_TMPFILE) != 0)
+#endif
+    ) {
+        va_list args;
+        va_start(args, flags);
+        mode = va_arg(args, mode_t);
+        va_end(args);
+    }
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_OPEN];
+    set_r10(previous_got);
+    res = func(name, flags, mode);
+    set_r10(current_got);
+
+    return res;
+}
+
+int close(int fd) {
+    int res;
+    xipfs_syscall_vfs_close_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_CLOSE];
+    set_r10(previous_got);
+    res = func(fd);
+    set_r10(current_got);
+
+    return res;
+}
+
+off_t lseek(int fd, off_t off, int whence) {
+    off_t res;
+    xipfs_syscall_vfs_lseek_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_LSEEK];
+    set_r10(previous_got);
+    res = func(fd, off, whence);
+    set_r10(current_got);
+
+    return res;
+}
+
+ssize_t write(int fd, const void *src, size_t count) {
+    ssize_t res;
+    xipfs_syscall_vfs_write_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_WRITE];
+    set_r10(previous_got);
+    res = func(fd, src, count);
+    set_r10(current_got);
+
+    return res;
+}
+
+ssize_t read(int fd, void *dest, size_t count) {
+    ssize_t res;
+    xipfs_syscall_vfs_read_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_READ];
+    set_r10(previous_got);
+    res = func(fd, dest, count);
+    set_r10(current_got);
+
+    return res;
+}
+
+ssize_t readline(int fd, char *dest, size_t count) {
+    ssize_t res;
+    xipfs_syscall_vfs_readline_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_READLINE];
+    set_r10(previous_got);
+    res = func(fd, dest, count);
+    set_r10(current_got);
+
+    return res;
+}
+
+int stat(const char *restrict path, struct stat *restrict buf) {
+    int res;
+    xipfs_syscall_vfs_stat_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_STAT];
+    set_r10(previous_got);
+    res = func(path, buf);
+    set_r10(current_got);
+
+    return res;
+}
+
+int fstat(int fd, struct stat *buf) {
+    int res;
+    xipfs_syscall_vfs_fstat_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_FSTAT];
+    set_r10(previous_got);
+    res = func(fd, buf);
+    set_r10(current_got);
+
+    return res;
+}
+
+int statvfs(const char *restrict path, struct statvfs *restrict buf) {
+    int res;
+    xipfs_syscall_vfs_statvfs_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_STATVFS];
+    set_r10(previous_got);
+    res = func(path, buf);
+    set_r10(current_got);
+
+    return res;
+}
+
+int fstatvfs(int fd, struct statvfs *buf) {
+    int res;
+    xipfs_syscall_vfs_fstatvfs_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_FSTATVFS];
+    set_r10(previous_got);
+    res = func(fd, buf);
+    set_r10(current_got);
+
+    return res;
+}
+
+int rename(const char *from_path, const char *to_path) {
+    int res;
+    xipfs_syscall_vfs_rename_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_RENAME];
+    set_r10(previous_got);
+    res = func(from_path, to_path);
+    set_r10(current_got);
+
+    return res;
+}
+
+int normalize_path(char *buf, const char *path, size_t buflen) {
+    int res;
+    xipfs_syscall_vfs_normalize_path_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_NORMALIZE_PATH];
+    set_r10(previous_got);
+    res = func(buf, path, buflen);
+    set_r10(current_got);
+
+    return res;
+}
+
+int fsync(int fd) {
+    int res;
+    xipfs_syscall_vfs_fsync_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_FSYNC];
+    set_r10(previous_got);
+    res = func(fd);
+    set_r10(current_got);
+
+    return res;
+}
+
+int fcntl(int fd, int cmd, ...) {
+    int res;
+    xipfs_syscall_vfs_fcntl_t func;
+
+    if (cmd != F_GETFL) {
+        return -ENOTSUP;
+    }
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_FCNTL];
+    set_r10(previous_got);
+    res = func(fd, cmd, 0);
+    set_r10(current_got);
+
+    return res;
+}
+
+int mkdir(const char *name, mode_t mode) {
+    int res;
+    xipfs_syscall_vfs_mkdir_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_MKDIR];
+    set_r10(previous_got);
+    res = func(name, mode);
     set_r10(current_got);
 
     return res;

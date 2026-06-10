@@ -1,5 +1,5 @@
 /*******************************************************************************/
-/*  © Université de Lille, The Pip Development Team (2015-2025)                */
+/*  © Université de Lille, The Pip Development Team (2015-2026)                */
 /*                                                                             */
 /*  This software is a computer program whose purpose is to run a minimal,     */
 /*  hypervisor relying on proven properties such as memory isolation.          */
@@ -38,6 +38,8 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include "vfs.h"
+
 extern int printf(const char * format, ...);
 
 extern int get_temp(void);
@@ -55,5 +57,9 @@ extern ssize_t copy_file(const char *name, void *buf, size_t nbyte);
 extern int get_file_size(const char *name, size_t *size);
 
 extern void *memset(void *m, int c, size_t n);
+extern int memcmp(const void *s1, const void *s2, size_t n);
+
+extern int strcmp(const char *s1, const char *s2);
+extern int strncmp(const char *s1, const char *s2, size_t n);
 
 #endif /* STDRIOT_H */
