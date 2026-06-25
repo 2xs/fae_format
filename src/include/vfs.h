@@ -40,6 +40,16 @@
 #include <sys/types.h> /* fsblkcnt_t, fsfilcnt_t, off_t */
 
 /**
+ * @def XIPFS_MAX_OPEN_DESC
+ *
+ * @brief The maximum number of opened descriptors
+ *
+ * @warning This definition MUST be kept synchronized with definitions in either xipfs_config.h or
+ * xipfs.h when compiling RIOT
+ */
+#define XIPFS_MAX_OPEN_DESC (16)
+
+/**
  * On baremetal toolchains, struct statvfs is not defined.
  * Please see https://pubs.opengroup.org/onlinepubs/009695399/basedefs/sys/statvfs.h.html
  */
@@ -61,33 +71,51 @@ struct statvfs {
     unsigned long f_namemax; /**< Maximum filename length. */
 };
 
+int vfs_open(const char *name, int flags, mode_t mode);
 int open(const char *name, int flags, ...);
+int vfs_close(int fd);
 int close(int fd);
 
+off_t vfs_lseek(int fd, off_t off, int whence);
 off_t lseek(int fd, off_t off, int whence);
 
+ssize_t vfs_write(int fd, const void *src, size_t count);
 ssize_t write(int fd, const void *src, size_t count);
+ssize_t vfs_read(int fd, void *dest, size_t count);
 ssize_t read(int fd, void *dest, size_t count);
-ssize_t readline(int fd, char *dest, size_t count);
+/*
+ * `man readline`.
+ * Regular standard c/GNU library's `readline` function returns a
+ * malloc'ed string, which must be freed by callers.
+ * Because we do not have an allocator right now, only vfs_readline
+ * is available.
+ */
+ssize_t vfs_readline(int fd, char *dest, size_t count);
 
+int vfs_stat(const char *restrict path, struct stat *restrict buf);
 int stat(const char *restrict path, struct stat *restrict buf);
+int vfs_fstat(int fd, struct stat *buf);
 int fstat(int fd, struct stat *buf);
+int vfs_statvfs(const char *restrict path, struct statvfs *restrict buf);
 int statvfs(const char *restrict path, struct statvfs *restrict buf);
+int vfs_fstatvfs(int fd, struct statvfs *buf);
 int fstatvfs(int fd, struct statvfs *buf);
 
+int vfs_rename(const char *from_path, const char *to_path);
 int rename(const char *from_path, const char *to_path);
 
-int normalize_path(char *buf, const char *path, size_t buflen);
+/* To the best of our knowledge, there is no path normalization function
+ * available in standard c/GNU library */
+int vfs_normalize_path(char *buf, const char *path, size_t buflen);
 
+int vfs_fsync(int fd);
 int fsync(int fd);
 
+int vfs_fcntl(int fd, int cmd, int arg);
 int fcntl(int fd, int cmd, ...);
 
+int vfs_mkdir(const char *name, mode_t mode);
 int mkdir(const char *name, mode_t mode);
-
-#ifdef TODO
-
-#endif
 
 #ifdef NO
 

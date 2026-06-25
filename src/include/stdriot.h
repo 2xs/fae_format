@@ -36,11 +36,16 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdarg.h>
 #include <sys/types.h>
 
 #include "vfs.h"
 
-extern int printf(const char * format, ...);
+extern int vprintf(const char * restrict format, va_list ap);
+extern int printf(const char * restrict format, ...);
+
+extern int vsnprintf(char * restrict str, size_t size, const char * restrict format, va_list ap);
+extern int snprintf(char * restrict str, size_t size, const char *restrict format, ...);
 
 extern int get_temp(void);
 

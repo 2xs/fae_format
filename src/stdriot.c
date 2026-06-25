@@ -54,47 +54,52 @@
  * enumeration declared in caller site (xipfs.h's one).
  *
  * @brief An enumeration describing the index of functions.
- *
+ * @remark Enumeration members are explicitly set to be able to
+ * to check easily syscalls IDs.
  * @see xipfs/include/xipfs.h
  */
 typedef enum xipfs_syscall_e {
-    XIPFS_SYSCALL_EXIT,
-    XIPFS_SYSCALL_VPRINTF,
-    XIPFS_SYSCALL_GET_TEMP,
-    XIPFS_SYSCALL_ISPRINT,
-    XIPFS_SYSCALL_STRTOL,
-    XIPFS_SYSCALL_GET_LED,
-    XIPFS_SYSCALL_SET_LED,
-    XIPFS_SYSCALL_COPY_FILE,
-    XIPFS_SYSCALL_GET_FILE_SIZE,
-    XIPFS_SYSCALL_MEMSET,
-    XIPFS_SYSCALL_MEMCMP,
-    XIPFS_SYSCALL_STRCMP,
-    XIPFS_SYSCALL_STRNCMP,
+    XIPFS_SYSCALL_EXIT               = 0,
+    XIPFS_SYSCALL_VPRINTF            = 1,
+    XIPFS_SYSCALL_GET_TEMP           = 2,
+    XIPFS_SYSCALL_ISPRINT            = 3,
+    XIPFS_SYSCALL_STRTOL             = 4,
+    XIPFS_SYSCALL_GET_LED            = 5,
+    XIPFS_SYSCALL_SET_LED            = 6,
+    XIPFS_SYSCALL_COPY_FILE          = 7,
+    XIPFS_SYSCALL_GET_FILE_SIZE      = 8,
+    XIPFS_SYSCALL_MEMSET             = 9,
+    XIPFS_SYSCALL_MEMCMP             = 10,
+    XIPFS_SYSCALL_STRCMP             = 11,
+    XIPFS_SYSCALL_STRNCMP            = 12,
 
     /* VFS */
-    XIPFS_SYSCALL_VFS_OPEN,
-    XIPFS_SYSCALL_VFS_CLOSE,
-    XIPFS_SYSCALL_VFS_LSEEK,
-    XIPFS_SYSCALL_VFS_WRITE,
-    XIPFS_SYSCALL_VFS_READ,
-    XIPFS_SYSCALL_VFS_READLINE,
-    XIPFS_SYSCALL_VFS_STAT,
-    XIPFS_SYSCALL_VFS_FSTAT,
-    XIPFS_SYSCALL_VFS_STATVFS,
-    XIPFS_SYSCALL_VFS_FSTATVFS,
-    XIPFS_SYSCALL_VFS_RENAME,
-    XIPFS_SYSCALL_VFS_NORMALIZE_PATH,
-    XIPFS_SYSCALL_VFS_FSYNC,
-    XIPFS_SYSCALL_VFS_FCNTL,
-    XIPFS_SYSCALL_VFS_MKDIR,
+    XIPFS_SYSCALL_VFS_OPEN           = 13,
+    XIPFS_SYSCALL_VFS_CLOSE          = 14,
+    XIPFS_SYSCALL_VFS_LSEEK          = 15,
+    XIPFS_SYSCALL_VFS_WRITE          = 16,
+    XIPFS_SYSCALL_VFS_READ           = 17,
+    XIPFS_SYSCALL_VFS_READLINE       = 18,
+    XIPFS_SYSCALL_VFS_STAT           = 19,
+    XIPFS_SYSCALL_VFS_FSTAT          = 20,
+    XIPFS_SYSCALL_VFS_STATVFS        = 21,
+    XIPFS_SYSCALL_VFS_FSTATVFS       = 22,
+    XIPFS_SYSCALL_VFS_RENAME         = 23,
+    XIPFS_SYSCALL_VFS_NORMALIZE_PATH = 24,
+    XIPFS_SYSCALL_VFS_FSYNC          = 25,
+    XIPFS_SYSCALL_VFS_FCNTL          = 26,
+    XIPFS_SYSCALL_VFS_MKDIR          = 27,
+
+    XIPFS_SYSCALL_VSNPRINTF          = 28,
 
     /* This value must remain the last in the enum declaration */
     XIPFS_SYSCALL_MAX
 } xipfs_syscall_t;
 
 typedef int (*xipfs_syscall_exit_t)(int status);
-typedef int (*xipfs_syscall_vprintf_t)(const char *format, va_list ap);
+typedef int (*xipfs_syscall_vprintf_t)(const char * restrict format, va_list ap);
+typedef int (*xipfs_syscall_vsnprintf_t)(char * restrict str, size_t size,
+                                         const char * restrict format, va_list ap);
 typedef int (*xipfs_syscall_get_temp_t)(void);
 typedef int (*xipfs_syscall_isprint_t)(int character);
 typedef long (*xipfs_syscall_strtol_t)(
@@ -176,21 +181,57 @@ static void exit(int status)
     func = xipfs_syscall_table[XIPFS_SYSCALL_EXIT];
     set_r10(previous_got);
     func(status);
+    /* Should never be reached */
+    for(;;) {}
+}
+
+int vprintf(const char * restrict format, va_list ap) {
+    int res;
+    xipfs_syscall_vprintf_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VPRINTF];
+    set_r10(previous_got);
+    res = func(format, ap);
     set_r10(current_got);
+
+    return res;
 }
 
 int printf(const char * format, ...)
 {
     int res;
     va_list ap;
-    xipfs_syscall_vprintf_t func;
 
     va_start(ap, format);
 
-    func = xipfs_syscall_table[XIPFS_SYSCALL_VPRINTF];
+    res = vprintf(format, ap);
+
+    va_end(ap);
+
+    return res;
+}
+
+int vsnprintf(char *restrict str, size_t size, const char *restrict format, va_list ap) {
+    int res;
+    xipfs_syscall_vsnprintf_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VSNPRINTF];
     set_r10(previous_got);
-    res = func(format, ap);
+    res = func(str, size, format, ap);
     set_r10(current_got);
+
+    va_end(ap);
+
+    return res;
+}
+
+int snprintf(char *restrict str, size_t size, const char *restrict format, ...) {
+    int res;
+    va_list ap;
+
+    va_start(ap, format);
+
+    res = vsnprintf(str, size, format, ap);
 
     va_end(ap);
 
@@ -333,9 +374,19 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 }
 
 /* VFS */
-int open(const char *name, int flags, ...) {
+int vfs_open(const char *name, int flags, mode_t mode) {
     int res;
     xipfs_syscall_vfs_open_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_OPEN];
+    set_r10(previous_got);
+    res = func(name, flags, mode);
+    set_r10(current_got);
+
+    return res;
+}
+
+int open(const char *name, int flags, ...) {
     mode_t mode = 0;
 
     if ( ((flags & O_CREAT) != 0)
@@ -349,15 +400,10 @@ int open(const char *name, int flags, ...) {
         va_end(args);
     }
 
-    func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_OPEN];
-    set_r10(previous_got);
-    res = func(name, flags, mode);
-    set_r10(current_got);
-
-    return res;
+    return vfs_open(name, flags, mode);
 }
 
-int close(int fd) {
+int vfs_close(int fd) {
     int res;
     xipfs_syscall_vfs_close_t func;
 
@@ -369,7 +415,11 @@ int close(int fd) {
     return res;
 }
 
-off_t lseek(int fd, off_t off, int whence) {
+int close(int fd) {
+    return vfs_close(fd);
+}
+
+off_t vfs_lseek(int fd, off_t off, int whence) {
     off_t res;
     xipfs_syscall_vfs_lseek_t func;
 
@@ -381,7 +431,11 @@ off_t lseek(int fd, off_t off, int whence) {
     return res;
 }
 
-ssize_t write(int fd, const void *src, size_t count) {
+off_t lseek(int fd, off_t off, int whence) {
+    return vfs_lseek(fd, off, whence);
+}
+
+ssize_t vfs_write(int fd, const void *src, size_t count) {
     ssize_t res;
     xipfs_syscall_vfs_write_t func;
 
@@ -393,7 +447,11 @@ ssize_t write(int fd, const void *src, size_t count) {
     return res;
 }
 
-ssize_t read(int fd, void *dest, size_t count) {
+ssize_t write(int fd, const void *src, size_t count) {
+    return vfs_write(fd, src, count);
+}
+
+ssize_t vfs_read(int fd, void *dest, size_t count) {
     ssize_t res;
     xipfs_syscall_vfs_read_t func;
 
@@ -405,7 +463,11 @@ ssize_t read(int fd, void *dest, size_t count) {
     return res;
 }
 
-ssize_t readline(int fd, char *dest, size_t count) {
+ssize_t read(int fd, void *dest, size_t count) {
+    return vfs_read(fd, dest, count);
+}
+
+ssize_t vfs_readline(int fd, char *dest, size_t count) {
     ssize_t res;
     xipfs_syscall_vfs_readline_t func;
 
@@ -417,7 +479,7 @@ ssize_t readline(int fd, char *dest, size_t count) {
     return res;
 }
 
-int stat(const char *restrict path, struct stat *restrict buf) {
+int vfs_stat(const char *restrict path, struct stat *restrict buf) {
     int res;
     xipfs_syscall_vfs_stat_t func;
 
@@ -429,7 +491,11 @@ int stat(const char *restrict path, struct stat *restrict buf) {
     return res;
 }
 
-int fstat(int fd, struct stat *buf) {
+int stat(const char *restrict path, struct stat *restrict buf) {
+    return vfs_stat(path, buf);
+}
+
+int vfs_fstat(int fd, struct stat *buf) {
     int res;
     xipfs_syscall_vfs_fstat_t func;
 
@@ -441,7 +507,11 @@ int fstat(int fd, struct stat *buf) {
     return res;
 }
 
-int statvfs(const char *restrict path, struct statvfs *restrict buf) {
+int fstat(int fd, struct stat *buf) {
+    return vfs_fstat(fd, buf);
+}
+
+int vfs_statvfs(const char *restrict path, struct statvfs *restrict buf) {
     int res;
     xipfs_syscall_vfs_statvfs_t func;
 
@@ -453,7 +523,11 @@ int statvfs(const char *restrict path, struct statvfs *restrict buf) {
     return res;
 }
 
-int fstatvfs(int fd, struct statvfs *buf) {
+int statvfs(const char *restrict path, struct statvfs *restrict buf) {
+    return vfs_statvfs(path, buf);
+}
+
+int vfs_fstatvfs(int fd, struct statvfs *buf) {
     int res;
     xipfs_syscall_vfs_fstatvfs_t func;
 
@@ -465,7 +539,11 @@ int fstatvfs(int fd, struct statvfs *buf) {
     return res;
 }
 
-int rename(const char *from_path, const char *to_path) {
+int fstatvfs(int fd, struct statvfs *buf) {
+    return vfs_fstatvfs(fd, buf);
+}
+
+int vfs_rename(const char *from_path, const char *to_path) {
     int res;
     xipfs_syscall_vfs_rename_t func;
 
@@ -477,7 +555,11 @@ int rename(const char *from_path, const char *to_path) {
     return res;
 }
 
-int normalize_path(char *buf, const char *path, size_t buflen) {
+int rename(const char *from_path, const char *to_path) {
+    return vfs_rename(from_path, to_path);
+}
+
+int vfs_normalize_path(char *buf, const char *path, size_t buflen) {
     int res;
     xipfs_syscall_vfs_normalize_path_t func;
 
@@ -489,7 +571,7 @@ int normalize_path(char *buf, const char *path, size_t buflen) {
     return res;
 }
 
-int fsync(int fd) {
+int vfs_fsync(int fd) {
     int res;
     xipfs_syscall_vfs_fsync_t func;
 
@@ -501,23 +583,31 @@ int fsync(int fd) {
     return res;
 }
 
-int fcntl(int fd, int cmd, ...) {
+int fsync(int fd) {
+    return vfs_fsync(fd);
+}
+
+int vfs_fcntl(int fd, int cmd, int arg) {
     int res;
     xipfs_syscall_vfs_fcntl_t func;
 
-    if (cmd != F_GETFL) {
-        return -ENOTSUP;
-    }
-
     func = xipfs_syscall_table[XIPFS_SYSCALL_VFS_FCNTL];
     set_r10(previous_got);
-    res = func(fd, cmd, 0);
+    res = func(fd, cmd, arg);
     set_r10(current_got);
 
     return res;
 }
 
-int mkdir(const char *name, mode_t mode) {
+int fcntl(int fd, int cmd, ...) {
+    if (cmd != F_GETFL) {
+        return -ENOTSUP;
+    }
+
+    return vfs_fcntl(fd, cmd, 0);
+}
+
+int vfs_mkdir(const char *name, mode_t mode) {
     int res;
     xipfs_syscall_vfs_mkdir_t func;
 
@@ -527,6 +617,10 @@ int mkdir(const char *name, mode_t mode) {
     set_r10(current_got);
 
     return res;
+}
+
+int mkdir(const char *name, mode_t mode) {
+    return vfs_mkdir(name, mode);
 }
 
 /**
