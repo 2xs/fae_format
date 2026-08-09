@@ -104,4 +104,6 @@ typedef enum scribe_code_e {
 
 extern scribe_code_t scribe_write(const void *data, size_t bytesize);
 
+extern const char *scribe_code_get_label(scribe_code_t code);
+
 #endif /* STDRIOT_H */

@@ -71,6 +71,7 @@ typedef enum xipfs_syscall_e {
     XIPFS_SYSCALL_STRLEN,
     XIPFS_SYSCALL_VSNPRINTF,
     XIPFS_SYSCALL_SCRIBE_WRITE,
+    XIPFS_SYSCALL_SCRIBE_CODE_GET_LABEL,
     XIPFS_SYSCALL_MAX
 } xipfs_syscall_t;
 
@@ -91,6 +92,7 @@ typedef size_t (*xipfs_syscall_strlen_t)(const char *s);
 typedef int (*xipfs_syscall_vsnprintf_t)(char *buffer, size_t buffer_bytesize,
                                          const char *format, va_list va);
 typedef scribe_code_t (*xipfs_syscall_scribe_write_t)(const void *data, size_t bytesize);
+typedef const char *(*xipfs_syscall_scribe_code_get_label_t)(scribe_code_t code);
 
 /**
  * @internal
@@ -306,6 +308,18 @@ scribe_code_t scribe_write(const void *data, size_t bytesize) {
     func = xipfs_syscall_table[XIPFS_SYSCALL_SCRIBE_WRITE];
     set_r10(previous_got);
     res  = func(data, bytesize);
+    set_r10(current_got);
+
+    return res;
+}
+
+const char *scribe_code_get_label(scribe_code_t code) {
+    const char *res;
+    xipfs_syscall_scribe_code_get_label_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_SCRIBE_CODE_GET_LABEL];
+    set_r10(previous_got);
+    res  = func(code);
     set_r10(current_got);
 
     return res;
