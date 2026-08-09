@@ -47,6 +47,7 @@
 #include "xipfs_crt0_ctx_data.h"
 #include "stdriot.h"
 
+
 /**
  * @warning The order of the members in the enumeration must
  * remain synchronized with the order of the members of the same
@@ -67,6 +68,9 @@ typedef enum xipfs_syscall_e {
     XIPFS_SYSCALL_COPY_FILE,
     XIPFS_SYSCALL_GET_FILE_SIZE,
     XIPFS_SYSCALL_MEMSET,
+    XIPFS_SYSCALL_STRLEN,
+    XIPFS_SYSCALL_VSNPRINTF,
+    XIPFS_SYSCALL_SCRIBE_WRITE,
     XIPFS_SYSCALL_MAX
 } xipfs_syscall_t;
 
@@ -83,6 +87,10 @@ typedef ssize_t (*xipfs_syscall_copy_file_t)(
 typedef int (*xipfs_syscall_get_file_size_t)(
     const char *name, size_t *size);
 typedef void *(*xipfs_syscall_memset_t)(void *m, int c, size_t n);
+typedef size_t (*xipfs_syscall_strlen_t)(const char *s);
+typedef int (*xipfs_syscall_vsnprintf_t)(char *buffer, size_t buffer_bytesize,
+                                         const char *format, va_list va);
+typedef scribe_code_t (*xipfs_syscall_scribe_write_t)(const void *data, size_t bytesize);
 
 /**
  * @internal
@@ -261,6 +269,43 @@ void *memset(void *m, int c, size_t n) {
     func = xipfs_syscall_table[XIPFS_SYSCALL_MEMSET];
     set_r10(previous_got);
     res  = func(m, c, n);
+    set_r10(current_got);
+
+    return res;
+}
+
+
+size_t strlen(const char *s) {
+    size_t res;
+    xipfs_syscall_strlen_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_STRLEN];
+    set_r10(previous_got);
+    res  = func(s);
+    set_r10(current_got);
+
+    return res;
+}
+
+int vsnprintf(char *buffer, size_t buffer_bytesize, const char *format, va_list ap) {
+    int res;
+    xipfs_syscall_vsnprintf_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_VSNPRINTF];
+    set_r10(previous_got);
+    res  = func(buffer, buffer_bytesize, format, ap);
+    set_r10(current_got);
+
+    return res;
+}
+
+scribe_code_t scribe_write(const void *data, size_t bytesize) {
+    scribe_code_t res;
+    xipfs_syscall_scribe_write_t func;
+
+    func = xipfs_syscall_table[XIPFS_SYSCALL_SCRIBE_WRITE];
+    set_r10(previous_got);
+    res  = func(data, bytesize);
     set_r10(current_got);
 
     return res;

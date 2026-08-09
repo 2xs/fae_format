@@ -37,6 +37,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include <stdarg.h>
 
 extern int printf(const char * format, ...);
 
@@ -55,5 +56,52 @@ extern ssize_t copy_file(const char *name, void *buf, size_t nbyte);
 extern int get_file_size(const char *name, size_t *size);
 
 extern void *memset(void *m, int c, size_t n);
+
+extern size_t strlen(const char *s);
+
+extern int vsnprintf(char *buffer, size_t buffer_bytesize, const char *format, va_list ap);
+
+static inline int snprintf(char *buffer, size_t buffer_size, const char *format, ...) {
+    va_list ap;
+
+    va_start(ap, format);
+
+    int res = vsnprintf(buffer, buffer_size, format, ap);
+
+    va_end(ap);
+
+    return res;
+}
+
+typedef enum scribe_code_e {
+    SCRIBE_CODE_OK = 0,
+
+    SCRIBE_CODE_NOT_INITIALIZED,
+    SCRIBE_CODE_ALREADY_INITIALIZED,
+
+    SCRIBE_CODE_NULL_SINKS,
+    SCRIBE_CODE_INVALID_SINKS_COUNT,
+
+    SCRIBE_CODE_NULL_SINK,
+    SCRIBE_CODE_NULL_SINK_CLASS,
+    SCRIBE_CODE_INTERNAL_INVALID_METHODS_OFFSETS,
+    SCRIBE_CODE_NULL_SINK_CLASS_METHOD,
+
+    SCRIBE_CODE_INVALID_SINK_STATE,
+    SCRIBE_CODE_PREPARATION_FAILURE,
+
+    SCRIBE_CODE_NO_DATA,
+    SCRIBE_CODE_INVALID_DATA_BYTESIZE,
+    SCRIBE_CODE_COMMIT_FAILURE,
+
+    SCRIBE_CODE_WRITE_FAILURE,
+
+    SCRIBE_CODE_FIRST = SCRIBE_CODE_OK,
+    SCRIBE_CODE_LAST  = SCRIBE_CODE_WRITE_FAILURE,
+} scribe_code_t;
+
+#define SCRIBE_CODE_COUNT ((size_t)( SCRIBE_CODE_LAST - SCRIBE_CODE_FIRST + 1 ))
+
+extern scribe_code_t scribe_write(const void *data, size_t bytesize);
 
 #endif /* STDRIOT_H */
